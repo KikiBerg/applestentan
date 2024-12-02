@@ -1,4 +1,4 @@
-from src.played_apple import PlayedApple
+from src_v1.played_apple import PlayedApple
 import random
 import time
 

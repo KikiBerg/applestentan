@@ -1,11 +1,11 @@
-from src.player import Player
-from src.played_apple import PlayedApple
+from src_v1.player import Player
+from src_v1.played_apple import PlayedApple
 import random
 import os
 
 
 class Game:
-    def __init__(self, num_players, red_apple_file="data/redApples.txt", green_apple_file="data/greenApples.txt"):
+    def __init__(self, num_players, red_apple_file="assets/redApples.txt", green_apple_file="assets/greenApples.txt"):
         self.num_players = num_players
         self.red_deck = self.load_cards(red_apple_file)
         self.green_deck = self.load_cards(green_apple_file)
