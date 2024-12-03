@@ -11,5 +11,7 @@ class BotPlayer(Player):
 
     def _bot_play(self) -> str:
         """Advanced bot decision-making logic."""
-        # Example: Choose the longest card name for fun
+        if not self.hand:
+            print(f"Bot Player {self.player_id} has no cards to play!")
+            return "No Card"  # Fallback if hand is empty
         return max(self.hand, key=len)
