@@ -10,11 +10,11 @@ class Player:
     """
 
     def __init__(self, player_id: int, is_bot: bool = False, connection=None):
-        self.player_id = player_id  # Unique ID for the player
-        self.is_bot = is_bot  # Whether the player is a bot
-        self.connection = connection  # Connection for online players
-        self.hand: List[str] = []  # List of red apples (cards) in the player's hand
-        self.green_apples: List[str] = []  # Collected green apples (points)
+        self.player_id = player_id
+        self.is_bot = is_bot
+        self.connection = connection
+        self.hand: List[str] = []
+        self.green_apples: List[str] = []
 
     def add_card(self, card: str):
         """Add a card to the player's hand."""
@@ -32,63 +32,64 @@ class Player:
     def _bot_play(self) -> str:
         """Simulates a bot selecting a random card."""
         if not self.hand:
-            print(f"Bot Player {self.player_id} has no cards to play!")
-            return "No Card"  # Fallback for empty hand
-        print(f"Bot Player {self.player_id} is choosing a card...")
+            print(f"🤖 Bot Player {self.player_id} has no cards to play! Skipping turn...")
+            return "No Card"
+        print(f"🤖 Bot Player {self.player_id} is thinking...")
         chosen_card = self.hand.pop(random.randint(0, len(self.hand) - 1))
-        print(f"Bot Player {self.player_id} chose: {chosen_card}")
+        print(f"🤖 Bot Player {self.player_id} played: '{chosen_card}'")
         return chosen_card
 
     def _online_play(self) -> str:
         """Handles card selection for an online player."""
         try:
-            return self.connection.recv(1024).decode().strip()  # Receive choice
+            return self.connection.recv(1024).decode().strip()
         except Exception:
+            print("⚠️ Connection error for online player!")
             return ""
 
     def _local_play(self) -> str:
         """Handles card selection for a local player."""
-        print("\n[Your Turn to Play]")
-        print(f"Your hand contains the following Red Apples (Cards):")
+        print("\n🃏 **[Your Turn to Play!]** 🃏")
+        print(f"✨ Your hand contains the following Red Apples (Cards):")
         for index, card in enumerate(self.hand):
-            print(f"[{index}] {card}")
-        print("Tip: Choose a card that best matches the Green Apple (judge's word/phrase)!")
+            print(f"  [{index}] {card}")
+        print("🎯 Tip: Choose the card that best matches the Green Apple (judge's word/phrase)!")
         while True:
             try:
-                choice = int(input("Enter the index of the card you'd like to play: "))
+                choice = int(input("🌟 Enter the **index** of the card you'd like to play: "))
                 if choice < 0 or choice >= len(self.hand):
                     raise ValueError
                 chosen_card = self.hand.pop(choice)
-                print(f"You played: {chosen_card}")
+                print(f"🎉 You played: '{chosen_card}'")
                 return chosen_card
             except ValueError:
-                print("Invalid input. Please enter a valid card index.")
+                print("🚫 Invalid input. Please enter a valid **card index**!")
 
     def judge(self, played_apples: List[str]) -> int:
         """Allows the player to select the winning card."""
         if self.is_bot:
-            print(f"Bot Player {self.player_id} is judging...")
+            print(f"🤖 Bot Player {self.player_id} is judging the cards...")
             winner_index = random.randint(0, len(played_apples) - 1)
-            print(f"Bot Player {self.player_id} chose card index {winner_index} as the winner.")
+            print(f"🤖 Bot Player {self.player_id} selected card #{winner_index} as the winner!")
             return winner_index
         elif self.connection:
             return int(self.connection.recv(1024).decode().strip())
         else:
-            print("\n[Judge's Turn]")
-            print("You are the judge this round!")
-            print("The Green Apple word/phrase is meant to evoke a concept. Pick the best match!")
+            print("\n👑 **[Judge's Turn]** 👑")
+            print("You are the judge for this round! 🏅")
+            print("✨ The Green Apple represents a concept. Pick the Red Apple card that you think matches it best!")
             print("Played Red Apples (Cards):")
             for index, card in enumerate(played_apples):
-                print(f"[{index}] {card}")
+                print(f"  [{index}] {card}")
             while True:
                 try:
-                    choice = int(input("Enter the index of the card you think best matches the Green Apple: "))
+                    choice = int(input("🌟 Enter the **index** of the card you think is the best match: "))
                     if choice < 0 or choice >= len(played_apples):
                         raise ValueError
-                    print(f"You selected card index {choice} as the winner.")
+                    print(f"🎖️ You selected card #{choice} as the winner!")
                     return choice
                 except ValueError:
-                    print("Invalid input. Please enter a valid card index.")
+                    print("🚫 Invalid input. Please enter a valid **card index**!")
 
 
 class GameEngine:
@@ -107,36 +108,36 @@ class GameEngine:
 
     def _deal_cards(self):
         """Distributes 7 cards to each player at the start of the game."""
-        print("\n[Dealing Cards]")
+        print("\n🍎 **[Dealing Cards]** 🍎")
         for player in self.players:
             for _ in range(7):  # Each player gets 7 cards
                 if self.red_apples:
                     player.add_card(self.red_apples.pop())
                 else:
-                    print("Warning: Not enough red apples to distribute full hands.")
+                    print("⚠️ Not enough Red Apples to distribute full hands!")
 
     def run(self):
         """Main game loop."""
-        print("Welcome to Apples to Apples!")
-        print("Goal: Be the first player to collect 4 Green Apples!")
-        print("Each round, one player is the judge and selects a Green Apple (adjective or phrase).")
-        print("The other players play Red Apples (cards) from their hand that best match the Green Apple.")
-        print("The judge picks the best match, and that player wins the round.\n")
+        print("\n🎉 Welcome to **Apples to Apples**! 🎉")
+        print("🟢 Goal: Be the **first player** to collect 4 Green Apples (Points)!")
+        print("👑 Each round, one player is the **judge** and selects a Green Apple (adjective or phrase).")
+        print("🍎 Other players play Red Apples (cards) from their hand that best match the Green Apple.")
+        print("🏆 The judge picks the best match, and that player wins the round!\n")
 
         judge_index = random.randint(0, len(self.players) - 1)
         while not self._game_over():
             green_apple = self.green_apples.pop(0)
-            print("\n[New Round]")
-            print(f"The Green Apple (Judge's Word/Phrase) is: {green_apple}")
-            print(f"Player {self.players[judge_index].player_id} is the judge this round.\n")
+            print("\n🍏 **[New Round]** 🍏")
+            print(f"🟢 The Green Apple (Judge's Word/Phrase) is: **{green_apple}**")
+            print(f"👑 Player {self.players[judge_index].player_id} is the **judge** this round!\n")
             self._collect_plays(judge_index)
-            print("\nAll cards have been played!")
-            print("The judge will now choose the best match...")
-            winner = self.players[judge_index].judge(self.played_apples)
-            winning_card = self.played_apples[winner]
-            print(f"The winning card is: {winning_card}")
-            print(f"Player {winner} wins this round and collects the Green Apple: {green_apple}")
-            self.players[winner].green_apples.append(green_apple)
+            print("\n📜 **All cards have been played!** 📜")
+            print("👀 The judge is now deciding the **best match**...")
+            winner_index = self.players[judge_index].judge(self.played_apples)
+            winning_card = self.played_apples[winner_index]
+            print(f"🎉 **The winning card is: '{winning_card}'**!")
+            print(f"🏆 Player {winner_index} wins this round and collects the Green Apple: **{green_apple}**")
+            self.players[winner_index].green_apples.append(green_apple)
             self.played_apples.clear()
             judge_index = (judge_index + 1) % len(self.players)
 
@@ -146,7 +147,7 @@ class GameEngine:
         """Collects played cards from all non-judging players."""
         for i, player in enumerate(self.players):
             if i != judge_index:
-                print(f"Player {player.player_id} is selecting their card...")
+                print(f"🎴 Player {player.player_id} is selecting their card...")
                 card = player.play()
                 self.played_apples.append(card)
 
@@ -157,6 +158,6 @@ class GameEngine:
     def _announce_winner(self):
         """Announces the winner of the game."""
         winner = max(self.players, key=lambda p: len(p.green_apples))
-        print("\n[Game Over]")
-        print(f"Player {winner.player_id} is the winner with {len(winner.green_apples)} Green Apples!")
-        print("Thank you for playing Apples to Apples!")
+        print("\n🏁 **[Game Over]** 🏁")
+        print(f"🎉 **Player {winner.player_id}** is the winner with **{len(winner.green_apples)} Green Apples!**")
+        print("🍏 Thank you for playing **Apples to Apples**! 🍎")
