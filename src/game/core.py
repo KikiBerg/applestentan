@@ -9,12 +9,14 @@ class Player:
     Represents a player in the game. Can be a bot, online, or local player.
     """
 
-    def __init__(self, player_id: int, is_bot: bool = False, connection=None):
+    def __init__(self, player_id: int, is_bot: bool = False, connection=None, input_func=input, output_func=print):
         self.player_id = player_id
         self.is_bot = is_bot
         self.connection = connection
         self.hand: List[str] = []
         self.green_apples: List[str] = []
+        self.input_func = input_func
+        self.output_func = output_func
 
     def add_card(self, card: str):
         """Add a card to the player's hand."""
@@ -32,11 +34,11 @@ class Player:
     def _bot_play(self) -> str:
         """Simulates a bot selecting a random card."""
         if not self.hand:
-            print(f"🤖 Bot Player {self.player_id} has no cards to play! Skipping turn...")
+            self.output_func(f"🤖 Bot Player {self.player_id} has no cards to play! Skipping turn...")
             return "No Card"
-        print(f"🤖 Bot Player {self.player_id} is thinking...")
+        self.output_func(f"🤖 Bot Player {self.player_id} is thinking...")
         chosen_card = self.hand.pop(random.randint(0, len(self.hand) - 1))
-        print(f"🤖 Bot Player {self.player_id} played: '{chosen_card}'")
+        self.output_func(f"🤖 Bot Player {self.player_id} played: '{chosen_card}'")
         return chosen_card
 
     def _online_play(self) -> str:
@@ -44,52 +46,52 @@ class Player:
         try:
             return self.connection.recv(1024).decode().strip()
         except Exception:
-            print("⚠️ Connection error for online player!")
+            self.output_func("⚠️ Connection error for online player!")
             return ""
 
     def _local_play(self) -> str:
         """Handles card selection for a local player."""
-        print("\n🃏 **[Your Turn to Play!]** 🃏")
-        print(f"✨ Your hand contains the following Red Apples (Cards):")
+        self.output_func("\n🃏 **[Your Turn to Play!]** 🃏")
+        self.output_func(f"✨ Your hand contains the following Red Apples (Cards):")
         for index, card in enumerate(self.hand):
-            print(f"  [{index}] {card}")
-        print("🎯 Tip: Choose the card that best matches the Green Apple (judge's word/phrase)!")
+            self.output_func(f"  [{index}] {card}")
+        self.output_func("🎯 Tip: Choose the card that best matches the Green Apple (judge's word/phrase)!")
         while True:
             try:
-                choice = int(input("🌟 Enter the **index** of the card you'd like to play: "))
+                choice = int(self.input_func("🌟 Enter the **index** of the card you'd like to play: "))
                 if choice < 0 or choice >= len(self.hand):
                     raise ValueError
                 chosen_card = self.hand.pop(choice)
-                print(f"🎉 You played: '{chosen_card}'")
+                self.output_func(f"🎉 You played: '{chosen_card}'")
                 return chosen_card
             except ValueError:
-                print("🚫 Invalid input. Please enter a valid **card index**!")
+                self.output_func("🚫 Invalid input. Please enter a valid **card index**!")
 
     def judge(self, played_apples: List[str]) -> int:
         """Allows the player to select the winning card."""
         if self.is_bot:
-            print(f"🤖 Bot Player {self.player_id} is judging the cards...")
+            self.output_func(f"🤖 Bot Player {self.player_id} is judging the cards...")
             winner_index = random.randint(0, len(played_apples) - 1)
-            print(f"🤖 Bot Player {self.player_id} selected card #{winner_index} as the winner!")
+            self.output_func(f"🤖 Bot Player {self.player_id} selected card #{winner_index} as the winner!")
             return winner_index
         elif self.connection:
             return int(self.connection.recv(1024).decode().strip())
         else:
-            print("\n👑 **[Judge's Turn]** 👑")
-            print("You are the judge for this round! 🏅")
-            print("✨ The Green Apple represents a concept. Pick the Red Apple card that you think matches it best!")
-            print("Played Red Apples (Cards):")
+            self.output_func("\n👑 **[Judge's Turn]** 👑")
+            self.output_func("You are the judge for this round! 🏅")
+            self.output_func("✨ The Green Apple represents a concept. Pick the Red Apple card that you think matches it best!")
+            self.output_func("Played Red Apples (Cards):")
             for index, card in enumerate(played_apples):
-                print(f"  [{index}] {card}")
+                self.output_func(f"  [{index}] {card}")
             while True:
                 try:
-                    choice = int(input("🌟 Enter the **index** of the card you think is the best match: "))
+                    choice = int(self.input_func("🌟 Enter the **index** of the card you think is the best match: "))
                     if choice < 0 or choice >= len(played_apples):
                         raise ValueError
-                    print(f"🎖️ You selected card #{choice} as the winner!")
+                    self.output_func(f"🎖️ You selected card #{choice} as the winner!")
                     return choice
                 except ValueError:
-                    print("🚫 Invalid input. Please enter a valid **card index**!")
+                    self.output_func("🚫 Invalid input. Please enter a valid **card index**!")
 
 
 class GameEngine:
@@ -107,14 +109,14 @@ class GameEngine:
         self._deal_cards()
 
     def _deal_cards(self):
-        """Distributes 7 cards to each player at the start of the game."""
+        """Distributes up to 7 cards to each player at the start of the game."""
         print("\n🍎 **[Dealing Cards]** 🍎")
         for player in self.players:
-            for _ in range(7):  # Each player gets 7 cards
-                if self.red_apples:
-                    player.add_card(self.red_apples.pop())
-                else:
-                    print("⚠️ Not enough Red Apples to distribute full hands!")
+            cards_to_deal = min(len(self.red_apples), 7 - len(player.hand))
+            for _ in range(cards_to_deal):  # Each player gets up to 7 cards
+                player.add_card(self.red_apples.pop())
+            if len(player.hand) < 7:
+                print(f"⚠️ Player {player.player_id} received only {len(player.hand)} cards (not enough Red Apples).")
 
     def run(self):
         """Main game loop."""
