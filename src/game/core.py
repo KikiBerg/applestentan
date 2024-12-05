@@ -1,7 +1,5 @@
-# Main game logic and core classes
-
+from typing import List, Optional, Callable
 import random
-from typing import List
 
 
 class Player:
@@ -9,7 +7,10 @@ class Player:
     Represents a player in the game. Can be a bot, online, or local player.
     """
 
-    def __init__(self, player_id: int, is_bot: bool = False, connection=None, input_func=input, output_func=print):
+    def __init__(self, player_id: int, is_bot: bool = False,
+                 connection=None,
+                 input_func: Optional[Callable] = input,
+                 output_func: Optional[Callable] = print):
         self.player_id = player_id
         self.is_bot = is_bot
         self.connection = connection
@@ -22,14 +23,25 @@ class Player:
         """Add a card to the player's hand."""
         self.hand.append(card)
 
-    def play(self) -> str:
+    def play(self) -> Optional[str]:
         """Plays a card based on the type of player."""
+        if not self.hand:
+            return None
         if self.is_bot:
             return self._bot_play()
         elif self.connection:
             return self._online_play()
-        else:
+        elif self._local_play():
             return self._local_play()
+        else:
+            while True:
+                self.output_func(f"Your hand: {', '.join(self.hand)}")
+                choice = self.input_func("Choose a card by index: ")
+                if choice.isdigit():
+                    idx = int(choice)
+                    if 0 <= idx < len(self.hand):
+                        return self.hand.pop(idx)
+                self.output_func("Invalid choice. Try again.")
 
     def _bot_play(self) -> str:
         """Simulates a bot selecting a random card."""
@@ -135,12 +147,17 @@ class GameEngine:
             self._collect_plays(judge_index)
             print("\n📜 **All cards have been played!** 📜")
             print("👀 The judge is now deciding the **best match**...")
+            # Judge selects the winning card
             winner_index = self.players[judge_index].judge(self.played_apples)
             winning_card = self.played_apples[winner_index]
             print(f"🎉 **The winning card is: '{winning_card}'**!")
             print(f"🏆 Player {winner_index} wins this round and collects the Green Apple: **{green_apple}**")
             self.players[winner_index].green_apples.append(green_apple)
+            # Clear played cards for the next round
             self.played_apples.clear()
+            # Refill players' hands up to 7 cards
+            self._refill_cards()
+            # Rotate the judge to the next player
             judge_index = (judge_index + 1) % len(self.players)
 
         self._announce_winner()
@@ -152,6 +169,14 @@ class GameEngine:
                 print(f"🎴 Player {player.player_id} is selecting their card...")
                 card = player.play()
                 self.played_apples.append(card)
+
+        random.shuffle(self.played_apples)
+
+    def _refill_cards(self):
+        """Refills players' hands up to 7 cards after each round."""
+        for player in self.players:
+            while len(player.hand) < 7 and self.red_apples:
+                player.add_card(self.red_apples.pop())
 
     def _game_over(self) -> bool:
         """Checks if any player has collected enough green apples to win."""
