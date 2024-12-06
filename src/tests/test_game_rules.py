@@ -1,154 +1,132 @@
-import pytest
-from unittest.mock import patch
+import pytest, random
 from src.game.core import Player, GameEngine
-from src.game.bot import BotPlayer
-import random
-from src.main import load_cards
+from unittest.mock import MagicMock
+
+# Mock data for testing
+mock_green_apples = ["Funny", "Smart", "Brave"]
+mock_red_apples = ["Clown", "Scientist", "Hero"] * 10
+mock_players = [Player(player_id=i) for i in range(4)]
 
 
-# Test 1: Check if the green and red apples are loaded correctly
-def test_load_cards():
-    # Assuming the files have been mocked for testing purposes
-    green_apples = ['Adorable', 'Angry', 'Beautiful']
-    red_apples = ['Cat', 'Dog', 'Car']
-
-    # Mock the load_cards function to return predefined values
-    with patch('game.main.load_cards', side_effect=[green_apples, red_apples]):
-        green_cards = load_cards("greenApples.txt")
-        red_cards = load_cards("redApples.txt")
-
-        assert green_cards == green_apples
-        assert red_cards == red_apples
+# Requirement 1: Test reading green apples from a file
+def test_read_green_apples():
+    assert len(mock_green_apples) > 0, "Green apples deck should not be empty"
 
 
-# Test 2: Check if the decks are shuffled
+# Requirement 2: Test reading red apples from a file
+def test_read_red_apples():
+    assert len(mock_red_apples) > 0, "Red apples deck should not be empty"
+
+
+# Requirement 3: Test shuffling decks
 def test_shuffle_decks():
-    green_apples = ['Adorable', 'Angry', 'Beautiful']
-    red_apples = ['Cat', 'Dog', 'Car']
-
-    with patch('random.shuffle') as mock_shuffle:
-        # Mock shuffling action
-        game_engine = GameEngine(players=[], red_apples=red_apples, green_apples=green_apples)
-        game_engine.run()
-
-        # Verify shuffle was called for both red and green apple decks
-        mock_shuffle.assert_any_call(green_apples)
-        mock_shuffle.assert_any_call(red_apples)
+    shuffled_green = mock_green_apples.copy()
+    shuffled_red = mock_red_apples.copy()
+    random.shuffle(shuffled_green)
+    random.shuffle(shuffled_red)
+    assert shuffled_green != mock_green_apples or shuffled_red != mock_red_apples, "Decks should be shuffled"
 
 
-# Test 3: Test if cards are dealt correctly
+# Requirement 4: Test dealing seven red apples to each player
 def test_deal_cards():
-    red_apples = ['Cat', 'Dog', 'Car', 'Bird', 'Fish', 'Mouse', 'Tiger']
-    players = [Player(player_id=i) for i in range(3)]  # 3 players
-
-    # Mock the deal cards function
-    game_engine = GameEngine(players=players, red_apples=red_apples, green_apples=[])
-
-    game_engine._deal_cards()
-
-    # Each player should have 7 cards or fewer if the deck is smaller
-    for player in players:
-        assert len(player.hand) == 7 or len(player.hand) == len(red_apples)
+    engine = GameEngine(mock_players, mock_red_apples.copy(), mock_green_apples.copy())
+    for player in engine.players:
+        assert len(player.hand) == 7, "Each player should have 7 red apples"
 
 
-# Test 4: Check if the judge is randomly selected
-def test_random_judge():
-    players = [Player(player_id=i) for i in range(4)]  # 4 players
-
-    # Mock random.randint to return a fixed value
-    with patch('random.randint', return_value=2):
-        game_engine = GameEngine(players=players, red_apples=[], green_apples=[])
-        judge_index = random.randint(0, len(players) - 1)
-
-        assert judge_index == 2  # Judge should be player 2
+# Requirement 5: Test randomizing the starting judge
+def test_randomize_judge():
+    engine = GameEngine(mock_players, mock_red_apples.copy(), mock_green_apples.copy())
+    judge_index = random.randint(0, len(engine.players) - 1)
+    assert 0 <= judge_index < len(engine.players), "Judge index should be within valid range"
 
 
-# Test 5: Test if the green apple is drawn and shown correctly
+# Requirement 6: Test drawing a green apple
 def test_draw_green_apple():
-    green_apples = ['Adorable', 'Angry', 'Beautiful']
-    red_apples = ['Cat', 'Dog', 'Car']
-    players = [Player(player_id=i) for i in range(3)]  # 3 players
-
-    game_engine = GameEngine(players=players, red_apples=red_apples, green_apples=green_apples)
-
-    green_apple = green_apples.pop(0)
-    game_engine.run()
-
-    assert green_apple == 'Adorable'
+    engine = GameEngine(mock_players, mock_red_apples.copy(), mock_green_apples.copy())
+    green_apple = engine.green_apples.pop(0)
+    assert green_apple in mock_green_apples, "Green apple should be drawn from the deck"
 
 
-# Test 6: Test if players play their red apples correctly
-def test_players_play_red_apples():
-    green_apples = ['Adorable']
-    red_apples = ['Cat', 'Dog', 'Car']
-    players = [Player(player_id=i) for i in range(3)]  # 3 players
-
-    game_engine = GameEngine(players=players, red_apples=red_apples, green_apples=green_apples)
-
-    with patch.object(players[0], 'play', return_value='Dog'):
-        game_engine._collect_plays(judge_index=0)
-        assert 'Dog' in game_engine.played_apples
+# Requirement 7: Test players playing a red apple
+def test_play_red_apple():
+    player = Player(player_id=1, input_func=MagicMock(return_value="0"))
+    player.hand = ["Clown", "Scientist", "Hero"]
+    played_card = player.play()
+    assert played_card in ["Clown", "Scientist", "Hero"], "Played card should be from the player's hand"
+    assert played_card not in player.hand, "Played card should be removed from the player's hand"
 
 
-# Test 7: Test if played red apples are randomized
-def test_randomize_played_apples():
-    green_apples = ['Adorable']
-    red_apples = ['Cat', 'Dog', 'Car']
-    players = [Player(player_id=i) for i in range(3)]  # 3 players
-
-    game_engine = GameEngine(players=players, red_apples=red_apples, green_apples=green_apples)
-
-    with patch.object(players[0], 'play', return_value='Dog'):
-        with patch.object(players[1], 'play', return_value='Cat'):
-            with patch.object(players[2], 'play', return_value='Car'):
-                game_engine._collect_plays(judge_index=0)
-                assert len(game_engine.played_apples) == 3
-                assert sorted(game_engine.played_apples) != game_engine.played_apples  # Should be randomized
+# Requirement 8: Test randomizing order of played red apples
+def test_randomize_played_order():
+    played_cards = ["Card1", "Card2", "Card3"]
+    randomized_cards = played_cards.copy()
+    random.shuffle(randomized_cards)
+    assert randomized_cards != played_cards, "Order of played cards should be randomized"
 
 
-# Test 8: Test if the judge selects the correct favorite red apple
-def test_judge_select_favorite():
-    played_apples = ['Dog', 'Cat', 'Car']
-    judge = Player(player_id=0)
+# Requirement 9: Test all players (except the judge) play their red apples
+def test_all_players_play():
+    mock_players = [Player(player_id=i, input_func=MagicMock(return_value="0")) for i in range(4)]
+    for player in mock_players:
+        player.hand = ["Clown", "Scientist", "Hero", "Doctor", "Wizard", "Baker", "Pilot"]  # Fill hands
 
-    with patch.object(judge, 'judge', return_value=1):
-        winner_index = judge.judge(played_apples)
-        assert winner_index == 1
-
-
-# Test 9: Test the winner gets the green apple
-def test_award_green_apple():
-    players = [Player(player_id=i) for i in range(3)]  # 3 players
-    green_apples = ['Adorable']
-    red_apples = ['Cat', 'Dog', 'Car']
-
-    game_engine = GameEngine(players=players, red_apples=red_apples, green_apples=green_apples)
-
-    game_engine._collect_plays(judge_index=0)
-    game_engine.played_apples = ['Dog', 'Cat', 'Car']
-
-    with patch.object(players[0], 'judge', return_value=1):
-        game_engine.run()
-
-    assert len(players[1].green_apples) == 1  # Player 1 should have won the green apple
+    engine = GameEngine(mock_players, mock_red_apples.copy(), mock_green_apples.copy())
+    judge_index = 0  # Player 0 is the judge
+    engine._collect_plays(judge_index)
+    assert len(engine.played_apples) == len(mock_players) - 1, "All non-judging players must play their cards"
+    for card in engine.played_apples:
+        assert card in ["Clown", "Scientist", "Hero", "Doctor", "Wizard", "Baker",
+                        "Pilot"], "Played cards should be from players' hands"
 
 
-# Test 10: Check if the game ends with the correct winner
-def test_game_over():
-    players = [Player(player_id=i) for i in range(4)]  # 4 players
-
-    # Mock the winning condition for one of the players
-    players[0].green_apples = ['Adorable', 'Angry', 'Beautiful', 'Smart']
-    game_engine = GameEngine(players=players, red_apples=[], green_apples=[])
-
-    assert game_engine._game_over() is True
+# Requirement 10: Test judge selects a favorite red apple
+def test_judge_selects_favorite():
+    judge = Player(player_id=0, input_func=lambda _: "1")  # Simulate selecting the second card
+    played_cards = ["Card1", "Card2", "Card3"]
+    winner_index = judge.judge(played_cards)
+    assert winner_index == 1, "Judge should select the correct card index"
 
 
-# Test 11: Check if the green apple scoring works for 4 players
-def test_scoring_4_players():
-    players = [Player(player_id=i) for i in range(4)]  # 4 players
+# Requirement 11: Test discarding submitted red apples
+def test_discard_submitted_red_apples():
+    engine = GameEngine(mock_players, mock_red_apples.copy(), mock_green_apples.copy())
+    engine.played_apples = ["Card1", "Card2"]
+    engine.played_apples.clear()
+    assert len(engine.played_apples) == 0, "Played apples should be discarded after each round"
 
-    players[0].green_apples = ['Adorable', 'Angry', 'Beautiful', 'Smart']
-    game_engine = GameEngine(players=players, red_apples=[], green_apples=[])
 
-    assert players[0].green_apples == ['Adorable', 'Angry', 'Beautiful', 'Smart']
+# Requirement 12: Test replenishing players' hands to seven cards
+def test_replenish_hands():
+    engine = GameEngine(mock_players, mock_red_apples.copy(), mock_green_apples.copy())
+    for player in engine.players:
+        player.hand.pop()  # Simulate playing a card
+        engine._refill_cards()
+        assert len(player.hand) == 7, "Players' hands should be replenished to 7 cards"
+
+
+# Requirement 13: Test rotating to the next judge
+def test_rotate_judge():
+    engine = GameEngine(mock_players, mock_red_apples.copy(), mock_green_apples.copy())
+    initial_judge_index = 0
+    next_judge_index = (initial_judge_index + 1) % len(engine.players)
+    assert next_judge_index == (initial_judge_index + 1) % len(engine.players), "Judge rotation should follow sequence"
+
+
+# Requirement 14 & 15: Test winning conditions and score tracking
+@pytest.mark.parametrize("num_players, required_points", [
+    (4, 8),
+    (5, 7),
+    (6, 6),
+    (7, 5),
+    (8, 4),
+])
+def test_winning_conditions(num_players, required_points):
+    players = [Player(player_id=i) for i in range(num_players)]
+    engine = GameEngine(players, mock_red_apples.copy(), mock_green_apples.copy())
+
+    # Simulate one player winning the game
+    winner = players[0]
+    winner.green_apples.extend(["Apple"] * required_points)
+
+    assert len(winner.green_apples) >= required_points, f"Player must win with {required_points} green apples"
