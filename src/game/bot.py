@@ -9,6 +9,10 @@ class BotPlayer(Player):
     def __init__(self, player_id: int):
         super().__init__(player_id, is_bot=True)
 
+    def play(self) -> str:
+        """Overrides the play method to ensure correct behavior for bots."""
+        return self._bot_play()
+
     def _bot_play(self) -> str:
         """Advanced bot decision-making logic."""
         if not self.hand:

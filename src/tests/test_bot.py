@@ -21,4 +21,4 @@ def test_bot_play():
 def test_bot_no_cards():
     bot = BotPlayer(player_id=1)
     chosen_card = bot.play()
-    assert chosen_card == 'No Card'  # Bot should return "No Card" if no cards are available
+    assert chosen_card == 'No Card'
